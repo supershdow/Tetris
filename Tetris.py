@@ -1,18 +1,20 @@
 import random
-import Tkinter
+from Tkinter import *
 import time
 
 
-top = Tkinter.Tk()
-C = Tkinter.Canvas(top,height=200,width=100)
+top = Tk()
+frame = Frame(top,height=0,width=200)
+#frame.bind("<Key>",key)
+C = Canvas(top,height=400,width=200)
 C.pack()
-
+#frame.pack()
 
 def create_board(width,height):
     return [[False] * width for _ in range(height)]
 
 def lose(board):
-    for col in board[0]:
+    for col in board[1]:
         if col:
             return True
     return False
@@ -24,9 +26,9 @@ def draw_board(board):
         x = 0 
         for col in row:
             if col:
-                C.create_rectangle(x,y,x+10,y+10,fill='black')
-            x += 10
-        y += 10
+                C.create_rectangle(x,y,x+20,y+20,fill='black')
+            x += 20
+        y += 20
 
 
 def print_board(board):
@@ -52,6 +54,18 @@ def gravity(board):
         y -= 1
     return board
 
+def fall(board, current):
+    y = len(board) - 2
+    while y > 0:
+        x = len(board[0]) - 1
+        while x > 0:
+            if board[y][x] and current[y][x]:
+                current[y+1][x] = board[y+1][x] = True
+                current[y][x] = board[y][x] = False
+            x -= 1
+        y -= 1
+    return board
+
 def check_clear_line(board):
     y = len(board) - 1
     while y > 0:
@@ -61,51 +75,120 @@ def check_clear_line(board):
                 x += 1
         if x == len(board[0]):
             board[y] = [False] * len(board[0])
-            #gravity(board)
+            board = gravity(board)
+            y += 1
         y -= 1
     return board
             
 
-def is_falling(board):
-    return
-    y = 0
-    while y < len(board)-2:
+def is_falling(board,current):
+    print current
+    y = len(board) - 1
+    while y > 0:
         x = 0
-        while x < len(board[0])-2:
-            if board[y][x] and board[y+1][x]:
-                break
-    
+        while x < len(board[0]):
+            if current[len(board) - 1][x]:
+                return False
+            elif current[y][x] and board[y+1][x] and not current[y+1][x]:
+                return False
+            x += 1
+        y -= 1
+    return True
+
+def valid_left(board,current):
+    y = len(board) - 1
+    while y > 0:
+        x = 0
+        while x < len(board[0]) - 1:
+            if current[y][x] and board[y][x-1] and not current[y][x-1]:
+                return True
+            x -= 1
+        y -= 1
+    return False
+
+def valid_right(board,current):
+    y = len(board) - 1
+    while y > 0:
+        x = len(board[0]) - 1
+        while x > 0:
+            if current[y][x] and board[y][x+1] and not current[y][x+1]:
+                return True
+            x -= 1
+        y -= 1
+    return False
+
+def move_left(board,current):
+    pass
+
+def move_right(board,current):
+    pass
+
+def key(event):
+    print 'pressed', repr(event.char)
+
+def callback(event):
+    frame.focus_set()
+    print 'clicked at', event.x, event.y
     
 
 def add_piece(board):
-    #pieces = ['line','T','L','RevL','squiggle','Revsquiqqle','box']
-    pieces = ['line']
-    current = random.choice(pieces)
-    if current == 'line':
-        board[1][len(board[0]) / 2 - 2] = True
-        board[1][len(board[0]) / 2 - 1] = True
-        board[1][len(board[0]) / 2] = True
-        board[1][len(board[0]) / 2 + 1] = True
+    current = create_board(len(board[0]),len(board))
+    pieces = ['line','T','L','RevL','squiggle','Revsquiqqle','box']
+    picked = random.choice(pieces)
+    center = len(current[0]) / 2
+    if picked == 'line':
+        for i in [center - 2, center - 1, center, center + 1]:
+            current[1][i] = True
+            board[1][i] = True
+    elif picked == 'T':
+        for i in [center - 2, center - 1, center]:
+            current[1][i] = True
+            board[1][i] = True
+        current[2][center - 1] = True
+        board[2][center - 1] = True
+    elif picked == 'L' or picked == 'RevL':
+        for i in [center - 2, center - 1, center]:
+            current[1][i] = True
+            board[1][i] = True
+        if picked == 'L':
+            current[2][center] = True
+            board[2][center] = True
+        else:
+            current[2][center - 2] = True
+            board[2][center - 2] = True
+    elif picked == 'squiggle' or picked == 'Revsquiggle':
+        for i in [center - 1, center]:
+            current[1][i] = True
+            board[1][i] = True
+        if  picked == 'squiggle':
+            for i in [center - 2, center - 1]:
+                current[2][i] = True
+                board[2][i] = True
+        else:
+            for i in [center, center + 1]:
+                current[2][i] = True
+                board[2][i] = True
+    elif picked == 'box':
+        for i in [1, 2]:
+            for j in [center - 1, center]:
+                current[i][j] = True
+                board[i][j] = True
     return current
 
+frame.bind('<Key>',key)
+frame.bind('<Button-1>', callback)
+frame.pack()
 
+difficulty = .2
 board = create_board(10,20)
-add_piece(board)
-board[19][0]=True
-board[19][1]=True
-board[19][2]=True
-board[19][7]=True
-board[19][8]=True
-board[19][9]=True
-#print_board(board)
+current = add_piece(board)
+fall(board,current)
 while not lose(board):
     board = check_clear_line(board)
-    if not is_falling:
+    if not is_falling(board,current):
         current = add_piece(board)
-    else:
-        board = gravity(board)
-    #print_board(board)
+    fall(board,current)
     draw_board(board)
     top.update()
-    time.sleep(1)
+    time.sleep(difficulty)
 top.mainloop()
