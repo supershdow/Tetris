@@ -14,7 +14,7 @@ def create_board(width,height):
     return [[False] * width for _ in range(height)]
 
 def lose(board):
-    for col in board[1]:
+    for col in board[2]:
         if col:
             return True
     return False
@@ -58,7 +58,7 @@ def fall(board, current):
     y = len(board) - 2
     while y > 0:
         x = len(board[0]) - 1
-        while x > 0:
+        while x >= 0:
             if board[y][x] and current[y][x]:
                 current[y+1][x] = board[y+1][x] = True
                 current[y][x] = board[y][x] = False
@@ -82,7 +82,6 @@ def check_clear_line(board):
             
 
 def is_falling(board,current):
-    print current
     y = len(board) - 1
     while y > 0:
         x = 0
@@ -99,10 +98,12 @@ def valid_left(board,current):
     y = len(board) - 1
     while y > 0:
         x = 0
-        while x < len(board[0]) - 1:
-            if current[y][x] and board[y][x-1] and not current[y][x-1]:
+        while x <= len(board[0]) - 1:
+            if current[y][0] or current[y-1][0]:
+                return False
+            elif current[y][x] and not board[y][x-1]:
                 return True
-            x -= 1
+            x += 1
         y -= 1
     return False
 
@@ -110,30 +111,56 @@ def valid_right(board,current):
     y = len(board) - 1
     while y > 0:
         x = len(board[0]) - 1
-        while x > 0:
-            if current[y][x] and board[y][x+1] and not current[y][x+1]:
+        while x >= 0:
+            if current[y][len(board[0])-1] or current[y-1][len(board[0])-1]:
+                return False
+            elif current[y][x] and not board[y][x+1]:
                 return True
             x -= 1
         y -= 1
     return False
 
 def move_left(board,current):
-    pass
+    y = len(board) - 1
+    while y > 0:
+        x = 0
+        while x <= len(board[0]) - 1:
+            if current[y][x]:
+                board[y][x] = False
+                board[y][x-1] = True
+                current[y][x] = False
+                current[y][x-1] = True
+            x += 1
+        y -= 1
 
 def move_right(board,current):
-    pass
+    y = len(board) - 1
+    while y > 0:
+        x = len(board[0]) - 1
+        while x >= 0:
+            if current[y][x]:
+                board[y][x] = False
+                board[y][x+1] = True
+                current[y][x] = False
+                current[y][x+1] = True
+            x -= 1
+        y -= 1
 
-def key(event):
-    print 'pressed', repr(event.char)
+def left_key(event):
+    if valid_left(board,current):
+        move_left(board,current)
 
-def callback(event):
-    frame.focus_set()
-    print 'clicked at', event.x, event.y
+def right_key(event):
+    if valid_right(board,current):
+        move_right(board,current)
     
+def down_key(event):
+    if is_falling(board,current):
+        fall(board,current)
 
 def add_piece(board):
     current = create_board(len(board[0]),len(board))
-    pieces = ['line','T','L','RevL','squiggle','Revsquiqqle','box']
+    pieces = ['line','T','L','RevL','squiggle','Revsquiggle','box']
     picked = random.choice(pieces)
     center = len(current[0]) / 2
     if picked == 'line':
@@ -175,20 +202,24 @@ def add_piece(board):
                 board[i][j] = True
     return current
 
-frame.bind('<Key>',key)
-frame.bind('<Button-1>', callback)
+top.bind('<Left>',left_key)
+top.bind('<Right>',right_key)
+top.bind('<Down>',down_key)
 frame.pack()
 
 difficulty = .2
 board = create_board(10,20)
 current = add_piece(board)
 fall(board,current)
-while not lose(board):
+while True:
     board = check_clear_line(board)
     if not is_falling(board,current):
+        if lose(board):
+            break
         current = add_piece(board)
     fall(board,current)
     draw_board(board)
     top.update()
     time.sleep(difficulty)
+print 'lose'
 top.mainloop()
